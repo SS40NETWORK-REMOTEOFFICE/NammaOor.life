@@ -7,6 +7,7 @@ export default function DistrictBottomSheet({
   onClose,
   selectedDistrict,
   onSelectDistrict,
+  onNavigateToDistrict,
   lang = 'en'
 }) {
   const [filterQuery, setFilterQuery] = useState('');
@@ -87,6 +88,9 @@ export default function DistrictBottomSheet({
                       key={d.id}
                       onClick={() => {
                         onSelectDistrict(d);
+                        if (onNavigateToDistrict && d.status === 'live') {
+                          onNavigateToDistrict(d.id);
+                        }
                         onClose();
                       }}
                       className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-colors text-left ${

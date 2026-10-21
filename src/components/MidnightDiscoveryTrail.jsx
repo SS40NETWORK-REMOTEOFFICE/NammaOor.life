@@ -5,7 +5,8 @@ import { TRANSLATIONS } from '../data/translations';
 export default function MidnightDiscoveryTrail({
   lang = 'en',
   onSelectDistrict,
-  onOpenPlaceDetail
+  onOpenPlaceDetail,
+  onNavigateToDistrict
 }) {
   const [activeStep, setActiveStep] = useState(0);
   const t = TRANSLATIONS[lang];
@@ -123,7 +124,13 @@ export default function MidnightDiscoveryTrail({
               {trailSteps.map((step, idx) => (
                 <div
                   key={step.id}
-                  onClick={() => onSelectDistrict(step.id)}
+                  onClick={() => {
+                    if (step.isLive && onNavigateToDistrict) {
+                      onNavigateToDistrict(step.id);
+                    } else {
+                      onSelectDistrict(step.id);
+                    }
+                  }}
                   className="flex items-start gap-5 sm:gap-8 group cursor-pointer"
                 >
                   {/* Stepper Dot */}

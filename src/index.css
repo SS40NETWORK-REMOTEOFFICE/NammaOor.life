@@ -52,6 +52,7 @@ body {
 /* Gold Text Gradient */
 .text-gold-gradient {
   background: linear-gradient(135deg, #FBF3D5 0%, #D4AF37 50%, #9E7319 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -176,6 +177,51 @@ html {
 
 .gold-glow {
   box-shadow: 0 0 24px rgba(197, 155, 39, 0.35);
+}
+
+/* Continuous Marquee Ticker */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Staggered Cinematic Fade-in-up Animations */
+@keyframes heroFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-hero-fade {
+  opacity: 0;
+  animation: heroFadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-delay-100 {
+  animation-delay: 150ms;
+}
+
+.anim-delay-200 {
+  animation-delay: 300ms;
+}
+
+.anim-delay-300 {
+  animation-delay: 450ms;
 }
 
 /* Respect reduced motion */

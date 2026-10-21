@@ -6,7 +6,8 @@ export default function RoyalHero({
   lang = 'en',
   onSelectDistrict,
   onOpenSearchModal,
-  onOpenPlaceDetail
+  onOpenPlaceDetail,
+  onNavigateToDistrict
 }) {
   const t = TRANSLATIONS[lang];
 
@@ -142,23 +143,29 @@ export default function RoyalHero({
 
       {/* Bottom Row of 4 Hero Destination Cards + CTA (matching the reference 4-card row!) */}
       <div className="relative z-20 w-full px-5 sm:px-8 lg:px-14 -mb-16 sm:-mb-20">
-        <div className="max-w-[1340px] mx-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 items-end">
+        <div className="max-w-[1340px] mx-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 items-stretch">
           
           {destinationCards.map((dest) => (
             <div
               key={dest.id}
-              onClick={() => onSelectDistrict(dest.id)}
-              className="group relative rounded-2xl overflow-hidden aspect-[4/5] sm:aspect-[3/4] cursor-pointer shadow-dark border border-white/25 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold"
+              onClick={() => {
+                if (dest.isLive && onNavigateToDistrict) {
+                  onNavigateToDistrict(dest.id);
+                } else {
+                  onSelectDistrict(dest.id);
+                }
+              }}
+              className="group relative rounded-2xl overflow-hidden aspect-[3/4] w-full min-h-[260px] sm:min-h-[290px] cursor-pointer shadow-dark border border-white/25 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col justify-between"
             >
               <img
                 src={dest.image}
                 alt={dest.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
               {/* Status Badge */}
-              <div className="absolute top-2.5 left-2.5">
+              <div className="relative z-10 p-2.5 sm:p-3">
                 {dest.isLive ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-forest/90 backdrop-blur-md text-white text-[10px] font-bold tracking-wider shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
@@ -172,8 +179,8 @@ export default function RoyalHero({
               </div>
 
               {/* Card Bottom Meta */}
-              <div className="absolute bottom-3 left-3 right-3 text-left">
-                <h3 className="font-cinzel text-base sm:text-lg font-bold text-white group-hover:text-brand-gold transition-colors">
+              <div className="relative z-10 p-3 sm:p-4 text-left">
+                <h3 className="font-cinzel text-base sm:text-lg font-bold text-white group-hover:text-brand-gold transition-colors line-clamp-1">
                   {dest.title}
                 </h3>
                 <p className="text-[10px] tracking-wider uppercase text-white/70 font-medium truncate mt-0.5">
@@ -184,7 +191,7 @@ export default function RoyalHero({
           ))}
 
           {/* 5th Column (Right CTA Card in Reference) */}
-          <div className="col-span-2 sm:col-span-2 md:col-span-4 lg:col-span-1 bg-black/60 backdrop-blur-md border border-brand-gold/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-dark text-left">
+          <div className="col-span-2 sm:col-span-2 md:col-span-4 lg:col-span-1 bg-black/60 backdrop-blur-md border border-brand-gold/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-dark text-left aspect-auto lg:aspect-[3/4] min-h-[260px] sm:min-h-[290px]">
             <div>
               <span className="text-[10px] font-cinzel tracking-[0.2em] uppercase text-brand-gold-light block mb-1">
                 A DISCOVERY ARCHIVE
@@ -199,7 +206,7 @@ export default function RoyalHero({
                 const el = document.getElementById('districts');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="mt-4 w-full py-2.5 px-4 rounded-full btn-gold font-cinzel text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2"
+              className="mt-4 w-full py-2.5 px-4 rounded-full btn-gold font-cinzel text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Explore Atlas</span>
               <ArrowRight size={13} />

@@ -6,7 +6,8 @@ import { MapPin, ArrowRight, ShieldCheck, Sparkles, Navigation } from 'lucide-re
 export default function AtlasInteractiveSection({
   lang = 'en',
   selectedDistrict,
-  onSelectDistrict
+  onSelectDistrict,
+  onNavigateToDistrict
 }) {
   const t = TRANSLATIONS[lang];
 
@@ -71,10 +72,14 @@ export default function AtlasInteractiveSection({
           <div className="shrink-0 flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => {
-                const el = document.getElementById('about');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                if (selectedDistrict?.status === 'live' && onNavigateToDistrict) {
+                  onNavigateToDistrict(selectedDistrict.id);
+                } else {
+                  const el = document.getElementById('about');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }
               }}
-              className="w-full sm:w-auto px-6 py-3 rounded-full btn-gold font-cinzel text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 rounded-full btn-gold font-cinzel text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md"
             >
               <span>{selectedDistrict?.status === 'live' ? 'Inspect Live Hub' : 'Join Waitlist'}</span>
               <ArrowRight size={14} />
