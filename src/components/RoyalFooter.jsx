@@ -16,17 +16,19 @@ export default function RoyalFooter({
         {/* Main Footer Row */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between pb-12 border-b border-white/10 gap-8">
           
-          {/* Logo on Left */}
+          {/* Official Brand Logo on Left */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full border border-brand-gold/60 bg-white/5 flex items-center justify-center text-brand-gold font-cinzel text-xl font-bold shadow-gold">
-              ந
-            </div>
+            <img
+              src="/images/nammaoor_logo.webp"
+              alt="NammaOor.life Tourist Guide"
+              className="w-12 h-12 object-contain rounded-full bg-white p-0.5 shadow-gold border border-brand-gold/60 shrink-0"
+            />
             <div className="flex flex-col text-left">
               <span className="font-cinzel text-lg sm:text-xl font-bold tracking-[0.2em] text-white">
                 NammaOor<span className="text-gold-gradient font-sans font-bold text-base">.life</span>
               </span>
-              <span className="text-[9px] tracking-[0.25em] uppercase text-brand-gold-light -mt-1 font-medium">
-                SOVEREIGN ARCHIVE BEYOND ORDINARY
+              <span className="text-[9px] tracking-[0.25em] uppercase text-brand-gold-light -mt-1 font-bold">
+                TOURIST GUIDE · TAMIL NADU
               </span>
             </div>
           </div>
@@ -37,7 +39,7 @@ export default function RoyalFooter({
             <a href="#districts" className="hover:text-brand-gold transition-colors">The 38 Districts</a>
             <a href="#charter" className="hover:text-brand-gold transition-colors">Sovereign Code</a>
             <a href="#inquiry" className="hover:text-brand-gold transition-colors">Merchant Ledger</a>
-            <button onClick={onOpenDistrictSheet} className="hover:text-brand-gold transition-colors">District Atlas</button>
+            <button onClick={onOpenDistrictSheet} className="hover:text-brand-gold transition-colors">District Guide</button>
           </div>
 
           {/* Right Slogan */}

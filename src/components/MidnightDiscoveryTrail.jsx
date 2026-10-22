@@ -20,7 +20,7 @@ export default function MidnightDiscoveryTrail({
       title: 'Tirunelveli',
       description: 'Thamirabarani riverbed wheat halwa, Nellaiappar musical pillars & sacred tank.',
       placesCount: '142 Verified Spots',
-      image: '/images/tirunelveli_halwa.jpg',
+      image: '/images/tirunelveli_halwa.webp',
       isLive: true
     },
     {
@@ -31,7 +31,7 @@ export default function MidnightDiscoveryTrail({
       title: 'Madurai',
       description: 'Meenakshi Amman ancient gopuram towers, midnight Kari Dosa & authentic Jigarthanda.',
       placesCount: '186 Spots Ready',
-      image: '/images/tamilnadu_palace_dusk.jpg',
+      image: '/images/tamilnadu_palace_dusk.webp',
       isLive: false
     },
     {
@@ -42,7 +42,7 @@ export default function MidnightDiscoveryTrail({
       title: 'Tenkasi & Courtallam',
       description: 'Natural mountain herbal spa cascades flowing from the Agasthiyar biosphere.',
       placesCount: '56 Spots Ready',
-      image: '/images/courtallam_falls.jpg',
+      image: '/images/courtallam_falls.webp',
       isLive: false
     },
     {
@@ -53,7 +53,7 @@ export default function MidnightDiscoveryTrail({
       title: 'Thanjavur & Delta',
       description: 'UNESCO Brihadeeswara Big Temple, royal Maratha palaces & heirloom Chola bronze.',
       placesCount: '130 Spots Ready',
-      image: '/images/nellaiappar_temple.jpg',
+      image: '/images/nellaiappar_temple.webp',
       isLive: false
     }
   ];
@@ -108,7 +108,7 @@ export default function MidnightDiscoveryTrail({
               }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full btn-gold font-cinzel text-xs font-bold tracking-wider uppercase"
             >
-              <span>Explore Interactive Atlas</span>
+              <span>Explore Interactive Guide</span>
               <ArrowRight size={14} />
             </button>
 

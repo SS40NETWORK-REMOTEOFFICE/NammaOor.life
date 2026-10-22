@@ -40,13 +40,20 @@ export default function DistrictBottomSheet({
 
         {/* Header */}
         <div className="px-6 pt-4 pb-3 flex items-center justify-between border-b border-border-subtle">
-          <div>
-            <h3 className="font-heading font-semibold text-xl text-text-heading">
-              {lang === 'ta' ? 'மாவட்டத்தை தேர்வு செய்யுங்கள்' : 'Choose your district'}
-            </h3>
-            <p className="text-xs text-text-meta">
-              {DISTRICTS.length} districts of Tamil Nadu
-            </p>
+          <div className="flex items-center gap-3">
+            <img
+              src="/images/nammaoor_logo.webp"
+              alt="NammaOor.life Tourist Guide"
+              className="w-10 h-10 object-contain rounded-full bg-white p-0.5 border border-brand-gold/50 shadow-sm shrink-0"
+            />
+            <div>
+              <h3 className="font-heading font-semibold text-xl text-text-heading">
+                {lang === 'ta' ? 'மாவட்டத்தை தேர்வு செய்யுங்கள்' : 'Choose your district'}
+              </h3>
+              <p className="text-xs text-text-meta">
+                {DISTRICTS.length} districts of Tamil Nadu · Tourist Guide
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}

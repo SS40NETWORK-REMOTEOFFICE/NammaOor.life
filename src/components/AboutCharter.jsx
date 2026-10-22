@@ -23,12 +23,19 @@ export default function AboutCharter({ lang = 'en' }) {
           {/* Left Column (7 cols): Editorial About Content */}
           <div className="lg:col-span-7 text-left">
             
-            {/* Eyebrow with gold divider line */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="font-cinzel text-xs tracking-[0.25em] uppercase text-brand-gold font-bold">
-                OUR SOVEREIGN PROMISE
-              </span>
-              <div className="w-16 h-[1.5px] bg-brand-gold/40" />
+            {/* Eyebrow with gold divider line & official emblem */}
+            <div className="flex items-center gap-4 mb-5">
+              <img
+                src="/images/nammaoor_logo.webp"
+                alt="NammaOor.life Tourist Guide"
+                className="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded-full bg-white p-1 shadow-gold border-2 border-brand-gold/50 shrink-0"
+              />
+              <div>
+                <span className="font-cinzel text-xs tracking-[0.25em] uppercase text-brand-gold font-bold block mb-1">
+                  OUR SOVEREIGN PROMISE
+                </span>
+                <div className="w-16 h-[1.5px] bg-brand-gold/40" />
+              </div>
             </div>
 
             {/* Large Serif Title */}
@@ -105,7 +112,7 @@ export default function AboutCharter({ lang = 'en' }) {
             {/* Image Spread with curved corners & subtle frame shadow */}
             <div className="relative rounded-3xl overflow-hidden shadow-card border border-border-subtle aspect-[16/11]">
               <img
-                src="/images/nellaiappar_temple.jpg"
+                src="/images/nellaiappar_temple.webp"
                 alt="Ancient Nellaiappar Temple Tank"
                 className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
               />

@@ -26,7 +26,7 @@ export default function RoyalInquirySection({ lang = 'en' }) {
       {/* Background Image: Illuminated Tamil Nadu Palace & Temple Tank at Dusk */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/images/tamilnadu_palace_dusk.jpg"
+          src="/images/tamilnadu_palace_dusk.webp"
           alt="Tamil Nadu Heritage Palace"
           className="w-full h-full object-cover object-center"
         />

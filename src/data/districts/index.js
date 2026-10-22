@@ -39,7 +39,7 @@ export function getDistrictData(districtId) {
         nameTa: summary.nameTa,
         tagline: summary.highlight,
         taglineTa: summary.highlight,
-        bannerImage: '/images/tamilnadu_hero_sunset.jpg',
+        bannerImage: '/images/tamilnadu_hero_sunset.webp',
         stats: {
           totalPlaces: summary.placesCount,
           curatedKeyLandmarks: 0,

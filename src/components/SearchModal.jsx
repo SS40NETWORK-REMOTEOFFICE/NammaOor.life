@@ -34,8 +34,13 @@ export default function SearchModal({ isOpen, onClose, onSelectPlace, onSelectDi
       <div className="bg-bg-card rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-border-subtle relative max-h-[80vh] flex flex-col">
         
         {/* Search Input Bar */}
-        <div className="relative flex items-center pb-4 border-b border-border-subtle">
-          <Search size={20} className="text-brand-terracotta mr-3 shrink-0" />
+        <div className="relative flex items-center pb-4 border-b border-border-subtle gap-2.5">
+          <img
+            src="/images/nammaoor_logo.webp"
+            alt="NammaOor.life"
+            className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-brand-gold/40 shadow-sm shrink-0"
+          />
+          <Search size={18} className="text-brand-terracotta shrink-0" />
           <input
             type="text"
             value={query}

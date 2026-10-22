@@ -24,6 +24,58 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDistrictData } from '../../data/districts/index';
+import { DISTRICTS } from '../../data/districts';
+import AtlasInteractiveSection from '../../components/AtlasInteractiveSection';
+
+function MandalaWatermark({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 400 400"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="200" cy="200" r="190" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+      <circle cx="200" cy="200" r="160" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="200" cy="200" r="130" stroke="currentColor" strokeWidth="1" strokeDasharray="4 2" />
+      <circle cx="200" cy="200" r="100" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="200" cy="200" r="70" stroke="currentColor" strokeWidth="1" />
+      <circle cx="200" cy="200" r="40" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="200" cy="200" r="15" fill="currentColor" fillOpacity="0.3" stroke="currentColor" strokeWidth="1" />
+      {[0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5].map((deg) => (
+        <g key={deg} transform={`rotate(${deg} 200 200)`}>
+          <path
+            d="M200 40 C208 70, 215 95, 200 130 C185 95, 192 70, 200 40 Z"
+            stroke="currentColor"
+            strokeWidth="1"
+            fill="currentColor"
+            fillOpacity="0.08"
+          />
+          <path
+            d="M200 100 C206 120, 210 140, 200 160 C190 140, 194 120, 200 100 Z"
+            stroke="currentColor"
+            strokeWidth="1"
+            fill="currentColor"
+            fillOpacity="0.12"
+          />
+          <circle cx="200" cy="30" r="3" fill="currentColor" />
+          <line x1="200" y1="160" x2="200" y2="190" stroke="currentColor" strokeWidth="1" />
+        </g>
+      ))}
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+        <g key={`arch-${deg}`} transform={`rotate(${deg} 200 200)`}>
+          <path
+            d="M170 10 Q200 -5 230 10"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            fill="none"
+          />
+        </g>
+      ))}
+    </svg>
+  );
+}
 
 export default function DistrictPage({
   districtId = 'tirunelveli',
@@ -37,139 +89,127 @@ export default function DistrictPage({
   const isLive = districtLookup?.isLive;
   const district = districtLookup?.data;
 
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [freeOnly, setFreeOnly] = useState(false);
   const [expandedNote, setExpandedNote] = useState('no-signboard');
   const [copiedId, setCopiedId] = useState(null);
   const [activePlace, setActivePlace] = useState(null);
 
-  // Map references
-  const mapContainerRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markersRef = useRef({});
-  const [activeMapLayer, setActiveMapLayer] = useState('osm');
+  // Selected district for 38-District Atlas Section
+  const [selectedAtlasDistrict, setSelectedAtlasDistrict] = useState(() => {
+    return DISTRICTS.find((d) => d.id === districtId) || DISTRICTS[0];
+  });
+
+  useEffect(() => {
+    const found = DISTRICTS.find((d) => d.id === districtId);
+    if (found) setSelectedAtlasDistrict(found);
+  }, [districtId]);
+
+  // Zero-latency image preloader: Instantiates all district WebP images into browser memory cache immediately on mount
+  useEffect(() => {
+    if (district?.places?.length) {
+      district.places.forEach((p) => {
+        if (p?.image) {
+          const img = new Image();
+          img.src = p.image;
+        }
+      });
+    }
+    if (district?.bannerImage) {
+      const img = new Image();
+      img.src = district.bannerImage;
+    }
+  }, [district]);
+
+  // All curated district places
+  const filteredPlaces = useMemo(() => {
+    return district?.places || [];
+  }, [district]);
+
+  // Scrollytelling Cinema Controller for Section 5
+  const cinemaTrackRef = useRef(null);
+  const [cinemaActiveIndex, setCinemaActiveIndex] = useState(0);
+  const [cinemaProgress, setCinemaProgress] = useState(0);
+
+  // Dynamic navbar scroll state for floating over-hero effect
+  const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    const handleNavScroll = () => {
+      setIsScrolled(window.scrollY > 40);
+    };
+    window.addEventListener('scroll', handleNavScroll, { passive: true });
+    handleNavScroll();
+    return () => window.removeEventListener('scroll', handleNavScroll);
+  }, []);
+
+  // Jump to frame in cinema track
+  const jumpToCinemaFrame = (targetIndex) => {
+    if (!cinemaTrackRef.current) return;
+    const rect = cinemaTrackRef.current.getBoundingClientRect();
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const trackTop = rect.top + scrollTop;
+    const windowHeight = window.innerHeight;
+    const totalScrollableDistance = rect.height - windowHeight;
+
+    const targetFraction = (targetIndex + 0.1) / Math.max(1, filteredPlaces.length);
+    const targetScrollY = trackTop + targetFraction * totalScrollableDistance;
+
+    window.scrollTo({
+      top: targetScrollY,
+      behavior: 'smooth'
+    });
+  };
 
   // Smooth in-page navigation without altering hash router URL
   const scrollToLandmark = (elementId) => {
     if (elementId !== 'landmarks-grid') {
-      setSelectedCategory('all');
-      setFreeOnly(false);
+      const targetIdx = filteredPlaces.findIndex(p => p.id === elementId);
+      if (targetIdx !== -1) {
+        jumpToCinemaFrame(targetIdx);
+        return;
+      }
     }
     setTimeout(() => {
       const el = document.getElementById(elementId);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: elementId === 'landmarks-grid' ? 'start' : 'center' });
-        if (elementId !== 'landmarks-grid') {
-          el.classList.add('ring-4', 'ring-brand-gold', 'ring-offset-4', 'transition-all', 'duration-500');
-          setTimeout(() => {
-            el.classList.remove('ring-4', 'ring-brand-gold', 'ring-offset-4');
-          }, 3000);
-        }
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 80);
   };
 
-  // Categories list (Brief and streamlined)
-  const categories = useMemo(() => [
-    { id: 'all', label: 'All (10)', labelTa: 'அனைத்தும் (10)' },
-    { id: 'spiritual', label: 'Spiritual', labelTa: 'ஆன்மீகம்' },
-    { id: 'culinary', label: 'Taste & Halwa', labelTa: 'அல்வா & சுவை' },
-    { id: 'waterfalls', label: 'Waterfalls', labelTa: 'நீர்வீழ்ச்சி' },
-    { id: 'wildlife', label: 'Tiger Reserve', labelTa: 'புலிகள் காப்பகம்' },
-    { id: 'nature', label: 'Hillocks & Tea', labelTa: 'மாஞ்சோலை' },
-    { id: 'science', label: 'Science Park', labelTa: 'அறிவியல்' },
-    { id: 'coastal', label: 'Coast', labelTa: 'கடற்கரை' }
-  ], []);
-
-  // Filter places
-  const filteredPlaces = useMemo(() => {
-    if (!district?.places) return [];
-    return district.places.filter((p) => {
-      if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
-      if (freeOnly && !p.fee.toLowerCase().includes('free')) return false;
-      return true;
-    });
-  }, [district, selectedCategory, freeOnly]);
-
-  // Leaflet map setup for district cluster
   useEffect(() => {
-    if (!mapContainerRef.current || !district || !district.places?.length) return;
+    let ticking = false;
 
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        center: [district.lat || 8.62, district.lng || 77.58],
-        zoom: 9,
-        scrollWheelZoom: false
-      });
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (cinemaTrackRef.current) {
+            const rect = cinemaTrackRef.current.getBoundingClientRect();
+            const windowH = window.innerHeight;
+            const totalScrollable = rect.height - windowH;
+            
+            if (totalScrollable > 0) {
+              const scrolled = -rect.top;
+              const rawProgress = scrolled / totalScrollable;
+              const clampedProgress = Math.max(0, Math.min(1, rawProgress));
+              setCinemaProgress(clampedProgress);
 
-      const tileLayer = L.tileLayer(
-        activeMapLayer === 'satellite'
-          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-          : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-          attribution: '&copy; OpenStreetMap contributors &copy; Esri'
-        }
-      ).addTo(map);
+              const numPlaces = filteredPlaces.length || 1;
+              const newIndex = Math.min(
+                numPlaces - 1,
+                Math.max(0, Math.floor(clampedProgress * numPlaces))
+              );
+              setCinemaActiveIndex(newIndex);
+            }
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
 
-      mapInstanceRef.current = map;
-      mapInstanceRef.current.currentTileLayer = tileLayer;
-    }
-
-    const map = mapInstanceRef.current;
-
-    // Clear old markers
-    Object.values(markersRef.current).forEach((m) => m.remove());
-    markersRef.current = {};
-
-    // Add marker for each place
-    district.places.forEach((place) => {
-      const customIcon = L.divIcon({
-        className: 'custom-leaflet-marker',
-        html: `
-          <div style="
-            background: ${place.isConfirmed ? '#C59B27' : '#C75B39'};
-            color: #FFFFFF;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            border: 2px solid #FFFFFF;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-          ">
-            📍
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-
-      const marker = L.marker([place.lat, place.lng], { icon: customIcon })
-        .addTo(map)
-        .bindPopup(`
-          <div style="font-family: sans-serif; padding: 4px; max-width: 200px;">
-            <strong style="color: #1A1815; font-size: 14px; display: block; margin-bottom: 2px;">
-              ${lang === 'ta' ? place.nameTa : place.name}
-            </strong>
-            <p style="margin: 0 0 4px 0; font-size: 12px; color: #524D46;">${place.venue}</p>
-            <span style="font-size: 10px; font-weight: bold; color: #C59B27; text-transform: uppercase;">
-              ${place.opens} – ${place.closes}
-            </span>
-          </div>
-        `);
-
-      marker.on('click', () => {
-        setActivePlace(place);
-      });
-
-      markersRef.current[place.id] = marker;
-    });
-  }, [district, lang, activeMapLayer]);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [filteredPlaces.length]);
 
   const handleCopy = (place) => {
     const text = `${place.name} (${place.nameTa})\nVenue: ${place.venue}\nHours: ${place.opens} to ${place.closes}\nPeak Hours: ${place.peakHours}\nEntry Fee: ${place.fee}`;
@@ -179,15 +219,9 @@ export default function DistrictPage({
   };
 
   const handleZoomToPlace = (place) => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([place.lat, place.lng], 13, { animate: true });
-      if (markersRef.current[place.id]) {
-        markersRef.current[place.id].openPopup();
-      }
-      const mapEl = document.getElementById('district-map');
-      if (mapEl) {
-        mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+    const mapEl = document.getElementById('atlas-map') || document.getElementById('district-map');
+    if (mapEl) {
+      mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -198,9 +232,14 @@ export default function DistrictPage({
         <p className="font-serif text-text-body mb-6">The requested district could not be resolved in the sovereign ledger.</p>
         <button
           onClick={onBackToAtlas}
-          className="px-6 py-3 rounded-full btn-gold font-cinzel text-xs font-bold uppercase"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full btn-gold font-cinzel text-xs font-bold uppercase cursor-pointer shadow-gold"
         >
-          Return to Tamil Nadu Atlas
+          <img
+            src="/images/nammaoor_logo.webp"
+            alt="NammaOor.life"
+            className="w-5 h-5 object-contain rounded-full bg-white p-0.5"
+          />
+          <span>{lang === 'ta' ? 'முகப்புக்குத் திரும்பு' : 'Return to Home'}</span>
         </button>
       </div>
     );
@@ -213,10 +252,17 @@ export default function DistrictPage({
         <header className="w-full bg-white border-b border-border-subtle p-5 flex items-center justify-between">
           <button
             onClick={onBackToAtlas}
-            className="inline-flex items-center gap-2 text-text-heading hover:text-brand-terracotta font-medium text-xs sm:text-sm font-cinzel font-bold cursor-pointer"
+            className="inline-flex items-center gap-2.5 text-text-heading hover:text-brand-terracotta font-medium text-xs sm:text-sm font-cinzel font-bold cursor-pointer group"
           >
-            <ArrowLeft size={16} />
-            <span>{lang === 'ta' ? 'அனைத்து மாவட்டங்கள்' : 'TAMIL NADU ATLAS'}</span>
+            <div className="w-7 h-7 rounded-full bg-bg-sand flex items-center justify-center border border-border-subtle group-hover:border-brand-gold transition-colors">
+              <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+            </div>
+            <img
+              src="/images/nammaoor_logo.webp"
+              alt="NammaOor.life"
+              className="w-7 h-7 object-contain rounded-full bg-white p-0.5 border border-brand-gold/40 shadow-sm"
+            />
+            <span>{lang === 'ta' ? 'முகப்புக்குச் செல்க' : 'Back to Home'}</span>
           </button>
           <div className="text-xs font-semibold text-brand-gold-dark bg-brand-gold/15 px-3.5 py-1 rounded-full">
             Under Sovereign Verification
@@ -254,80 +300,74 @@ export default function DistrictPage({
   return (
     <div className={`min-h-screen bg-bg-primary text-text-body font-body antialiased ${lang === 'ta' ? 'font-tamil' : ''}`}>
       
-      {/* 1. TOP CULTURAL ALERT TICKER (Positioned above the header) */}
-      {district.festivalAlert && (
-        <aside className="w-full bg-stone-950 text-white py-2 border-b border-brand-gold/30 shadow-md overflow-hidden relative z-50">
-          <div className="flex items-center">
-            
-            {/* Continuous Moving Marquee Track */}
-            <div className="overflow-hidden flex-1 cursor-pointer">
-              <div className="animate-marquee whitespace-nowrap flex items-center gap-8 py-0.5 text-xs sm:text-sm">
-                
-                {/* Loop 1 */}
-                <div className="flex items-center gap-6 text-white/90">
-                  <span className="font-cinzel font-bold text-brand-gold-light tracking-wide">
-                    {district.festivalAlert.title} ({district.festivalAlert.period})
-                  </span>
-                  <span className="text-white/40">✦</span>
-                  <span>Sri Nellaiappar & Mother Kanthimathi Amman Divine Wedding Ceremony</span>
-                  <span className="text-white/40">✦</span>
-                  <span className="text-amber-200">Golden Chariot Circumambulation on Four Car Streets</span>
-                  <span className="text-white/40">✦</span>
-                  <button
-                    onClick={() => scrollToLandmark('nellaiappar-temple')}
-                    className="inline-flex items-center gap-1 text-brand-gold hover:text-white underline font-semibold transition-colors cursor-pointer"
-                  >
-                    <span>Temple Details & Chariot</span>
-                    <ExternalLink size={12} />
-                  </button>
-                </div>
-
-                {/* Loop 2 */}
-                <div className="flex items-center gap-6 text-white/90" aria-hidden="true">
-                  <span className="font-cinzel font-bold text-brand-gold-light tracking-wide">
-                    {district.festivalAlert.title} ({district.festivalAlert.period})
-                  </span>
-                  <span className="text-white/40">✦</span>
-                  <span>Sri Nellaiappar & Mother Kanthimathi Amman Divine Wedding Ceremony</span>
-                  <span className="text-white/40">✦</span>
-                  <span className="text-amber-200">Golden Chariot Circumambulation on Four Car Streets</span>
-                  <span className="text-white/40">✦</span>
-                  <button
-                    onClick={() => scrollToLandmark('nellaiappar-temple')}
-                    className="inline-flex items-center gap-1 text-brand-gold hover:text-white underline font-semibold transition-colors cursor-pointer"
-                  >
-                    <span>Temple Details & Chariot</span>
-                    <ExternalLink size={12} />
-                  </button>
-                </div>
-
+      {/* 1. TOP FLOATING OVER-HERO GLOBAL NAVIGATION BAR */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 ${
+          isScrolled
+            ? 'bg-stone-950/90 backdrop-blur-md border-b border-white/10 shadow-lg py-3 sm:py-3.5'
+            : 'bg-gradient-to-b from-black/80 via-black/25 to-transparent border-b border-transparent py-4 sm:py-5'
+        }`}
+      >
+        <div className="max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-10 flex items-center justify-between text-white">
+          
+          {/* Left: Brand Back Navigation */}
+          <button
+            onClick={onBackToAtlas}
+            className="flex items-center gap-2.5 sm:gap-3 group cursor-pointer text-left"
+            title="Return to NammaOor.life"
+          >
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 group-hover:border-brand-gold text-brand-gold-light flex items-center justify-center transition-all drop-shadow">
+              <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+            </div>
+            <img
+              src="/images/nammaoor_logo.webp"
+              alt="NammaOor.life Tourist Guide"
+              className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-full bg-white p-0.5 shadow-md border border-brand-gold/40 group-hover:scale-105 transition-transform"
+            />
+            <div className="hidden sm:block">
+              <div className="font-cinzel font-black text-sm text-white tracking-wide leading-tight group-hover:text-brand-gold-light transition-colors drop-shadow">
+                NammaOor.life
+              </div>
+              <div className="text-[10px] tracking-wider uppercase text-brand-gold-light font-bold leading-none mt-0.5 drop-shadow">
+                {lang === 'ta' ? 'சுற்றுலா வழிகாட்டி' : 'TOURIST GUIDE'}
               </div>
             </div>
+          </button>
 
-            {/* Right Action Button */}
-            <div className="z-20 bg-stone-950 px-3 sm:px-6 py-1 shrink-0 hidden sm:flex items-center border-l border-white/10 shadow-lg">
-              <button
-                onClick={() => scrollToLandmark('nellaiappar-temple')}
-                className="inline-flex items-center gap-1.5 bg-brand-gold hover:bg-brand-gold-light text-stone-950 font-bold text-xs px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"
-              >
-                <span>{lang === 'ta' ? 'கோயில்' : 'View Timings'}</span>
-                <ExternalLink size={11} />
-              </button>
-            </div>
+          {/* Right Action Icons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onOpenSearch}
+              className="p-2 sm:px-4 sm:py-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs flex items-center gap-2 backdrop-blur-md transition-all cursor-pointer shadow-sm"
+              title="Search Places"
+            >
+              <Search size={15} className="text-brand-gold-light" />
+              <span className="hidden sm:inline font-medium">{lang === 'ta' ? 'தேடுக' : 'Search Places'}</span>
+            </button>
 
+            <button
+              onClick={() => onToggleLang(lang === 'en' ? 'ta' : 'en')}
+              className="px-4 py-2 rounded-full border border-brand-gold bg-brand-gold/25 hover:bg-brand-gold/40 text-brand-gold-light font-bold text-xs backdrop-blur-md transition-all cursor-pointer shadow-gold"
+            >
+              {lang === 'en' ? 'தமிழ்' : 'English'}
+            </button>
           </div>
-        </aside>
-      )}
 
-      {/* Hero Wrapper containing Header & Hero Banner with seamless continuous backdrop */}
+        </div>
+      </header>
+
+      {/* Hero Wrapper containing Hero Banner with seamless continuous backdrop */}
       <div className="relative w-full overflow-visible">
         
-        {/* Background Image & Cinematic Lighting Overlay covering both Header & Hero */}
+        {/* Background Image & Cinematic Lighting Overlay covering Hero */}
         <div className="absolute inset-0 z-0 select-none pointer-events-none overflow-hidden">
           <img
             src={district.bannerImage}
             alt={`${district.name} Sunset Vista`}
             className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
           />
           {/* Multi-layer cinematic vignette for high contrast & elegance */}
           <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/50 to-black/70" />
@@ -335,42 +375,8 @@ export default function DistrictPage({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_rgba(0,0,0,0.45)_100%)]" />
         </div>
 
-        {/* 2. TOP FLOATING NAVIGATION BAR OVER HERO */}
-        <header className="relative z-40 w-full border-b border-white/10">
-          <div className="max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-10 h-16 sm:h-20 flex items-center justify-between text-white">
-            
-            <button
-              onClick={onBackToAtlas}
-              className="inline-flex items-center gap-2 text-white hover:text-brand-gold-light font-medium text-xs sm:text-sm tracking-wide transition-colors group cursor-pointer drop-shadow"
-            >
-              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform text-brand-gold-light" />
-              <span className="font-cinzel font-bold">{lang === 'ta' ? 'அனைத்து மாவட்டங்கள்' : 'TAMIL NADU ATLAS'}</span>
-            </button>
-
-            {/* Right Action Icons */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={onOpenSearch}
-                className="p-2 sm:px-4 sm:py-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs flex items-center gap-2 backdrop-blur-md transition-all cursor-pointer shadow-sm"
-                title="Search Places"
-              >
-                <Search size={15} className="text-brand-gold-light" />
-                <span className="hidden sm:inline font-medium">{lang === 'ta' ? 'தேடுக' : 'Search Places'}</span>
-              </button>
-
-              <button
-                onClick={() => onToggleLang(lang === 'en' ? 'ta' : 'en')}
-                className="px-4 py-2 rounded-full border border-brand-gold bg-brand-gold/25 hover:bg-brand-gold/40 text-brand-gold-light font-bold text-xs backdrop-blur-md transition-all cursor-pointer shadow-gold"
-              >
-                {lang === 'en' ? 'தமிழ்' : 'English'}
-              </button>
-            </div>
-
-          </div>
-        </header>
-
-        {/* 3. CINEMATIC LUXURY ROYAL HERO BANNER (Editorial Reference Layout) */}
-        <section className="relative z-10 w-full min-h-[82vh] lg:min-h-[88vh] flex flex-col justify-between overflow-visible pb-0 pt-8 sm:pt-12">
+        {/* 2. CINEMATIC LUXURY ROYAL HERO BANNER (Editorial Reference Layout) */}
+        <section className="relative z-10 w-full min-h-[85vh] lg:min-h-[90vh] flex flex-col justify-between overflow-visible pb-0 pt-24 sm:pt-28 lg:pt-32">
           
           {/* Hero Middle Content: Asymmetric Editorial Typography & Cultural Pillars */}
           <div className="max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14 w-full text-white flex-1 flex flex-col justify-center my-6 sm:my-8">
@@ -431,9 +437,9 @@ export default function DistrictPage({
 
         </div>
 
-        {/* Hero Bottom Bar: 4 Interactive Floating Showcase Cards + Right Narrative CTA (Overlapping Hero Bottom) */}
+        {/* Hero Bottom Bar: 4 Interactive Floating Showcase Cards (Overlapping Hero Bottom) */}
         <div className="relative z-30 w-full px-5 sm:px-8 lg:px-14 -mb-16 sm:-mb-20">
-          <div className="max-w-[1340px] mx-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 items-stretch">
+          <div className="max-w-[1340px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 items-stretch">
             
             {/* Card 1: Nellaiappar */}
             <button
@@ -442,7 +448,7 @@ export default function DistrictPage({
               className="group relative rounded-2xl overflow-hidden aspect-[3/4] w-full min-h-[260px] sm:min-h-[290px] cursor-pointer shadow-dark border border-white/25 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col justify-end bg-black/40 backdrop-blur-sm text-left"
             >
               <img
-                src="/images/nellaiappar_temple_gopuram.jpg"
+                src="/images/nellaiappar_temple_gopuram.webp"
                 alt="Nellaiappar Temple"
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               />
@@ -465,7 +471,7 @@ export default function DistrictPage({
               className="group relative rounded-2xl overflow-hidden aspect-[3/4] w-full min-h-[260px] sm:min-h-[290px] cursor-pointer shadow-dark border border-white/25 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col justify-end bg-black/40 backdrop-blur-sm text-left"
             >
               <img
-                src="/images/iruttu_kadai_authentic.jpg"
+                src="/images/iruttu_kadai_authentic.webp"
                 alt="Iruttu Kadai Halwa"
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               />
@@ -488,7 +494,7 @@ export default function DistrictPage({
               className="group relative rounded-2xl overflow-hidden aspect-[3/4] w-full min-h-[260px] sm:min-h-[290px] cursor-pointer shadow-dark border border-white/25 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col justify-end bg-black/40 backdrop-blur-sm text-left"
             >
               <img
-                src="/images/manimuthar_falls_dam.jpg"
+                src="/images/manimuthar_falls_dam.webp"
                 alt="Manimuthar & Thamirabarani Falls"
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               />
@@ -511,7 +517,7 @@ export default function DistrictPage({
               className="group relative rounded-2xl overflow-hidden aspect-[3/4] w-full min-h-[260px] sm:min-h-[290px] cursor-pointer shadow-dark border border-white/25 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col justify-end bg-black/40 backdrop-blur-sm text-left"
             >
               <img
-                src="/images/kmtr_wildlife_reserve.jpg"
+                src="/images/kmtr_wildlife_reserve.webp"
                 alt="KMTR Tiger Reserve & Manjolai"
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               />
@@ -527,26 +533,6 @@ export default function DistrictPage({
               </div>
             </button>
 
-            {/* 5th Column (Right CTA Card matching Home Page) */}
-            <div className="col-span-2 sm:col-span-2 md:col-span-4 lg:col-span-1 bg-black/60 backdrop-blur-md border border-brand-gold/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-dark text-left aspect-auto lg:aspect-[3/4] min-h-[260px] sm:min-h-[290px]">
-              <div>
-                <span className="text-[10px] font-cinzel tracking-[0.2em] uppercase text-brand-gold-light block mb-1">
-                  {lang === 'ta' ? 'பண்பாட்டுத் தொகுப்பு' : 'A DISCOVERY ARCHIVE'}
-                </span>
-                <p className="font-serif text-sm text-white/90 italic leading-snug">
-                  {lang === 'ta' ? '10 முதன்மைத் தலங்கள், காலமுறை விதிகள் மற்றும் நேரடி வழிகாட்டல்.' : 'Across 10 curated icons, verified opening windows, and genuine dispatches.'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => scrollToLandmark('landmarks-grid')}
-                className="mt-4 w-full py-2.5 px-4 rounded-full btn-gold font-cinzel text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer shadow-gold"
-              >
-                <span>{lang === 'ta' ? '10 இடங்கள்' : 'Explore All 10'}</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
 
           </div>
         </div>
@@ -556,235 +542,279 @@ export default function DistrictPage({
     </div>
 
     {/* Buffer zone that gracefully receives the bottom half of the overlapping cards */}
-    <div className="w-full bg-bg-primary pt-20 sm:pt-24 pb-2" />
+    <div className="w-full bg-bg-primary pt-14 sm:pt-16 pb-2" />
 
-    {/* 4. STICKY FILTER CONTROLS & TIMINGS FILTER */}
-    <section className="w-full bg-bg-sand/95 py-3.5 sm:py-4 border-y border-border-subtle sticky top-0 z-20 backdrop-blur-md shadow-sm">
-        <div className="max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            {/* Category tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                    selectedCategory === cat.id
-                      ? 'bg-brand-forest text-white shadow-sm font-semibold'
-                      : 'bg-white text-text-body hover:bg-white/80 border border-border-subtle'
-                  }`}
-                >
-                  {lang === 'ta' ? cat.labelTa : cat.label}
-                </button>
-              ))}
+    {/* 5. THE 10 LANDMARK FULL-BLEED STICKY SCROLLYTELLING CINEMA */}
+      <section className="w-full pt-12 pb-4">
+        {/* Section Editorial Header */}
+        <div className="max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14 mb-8 pb-8 border-b border-brand-gold/30 relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="max-w-2xl relative z-10 text-left">
+            <div className="flex items-center gap-3 mb-2.5">
+              <span className="font-cinzel text-xs tracking-[0.25em] text-brand-gold uppercase font-bold">
+                {lang === 'ta' ? 'அதிகாரப்பூர்வ கள வழிகாட்டி' : 'NAMMAOOR.LIFE TOURIST GUIDE'}
+              </span>
+              <div className="h-[1.5px] w-16 bg-brand-gold/60" />
             </div>
+            <h2 className="font-cinzel text-2xl sm:text-4xl lg:text-5xl font-black text-text-heading tracking-tight mb-3 leading-[1.15]">
+              {lang === 'ta' ? `${district.nameTa} முக்கிய அடையாளங்கள்` : `${district.name} Landmarks & Essential Destinations`}
+            </h2>
+            <p className="font-serif text-sm sm:text-base text-text-body/85 leading-relaxed">
+              {lang === 'ta'
+                ? 'தாமிரபரணி ஆற்றங்கரை, 7-ஆம் நூற்றாண்டு இசைத்தூண்கள், மாஞ்சோலை தேயிலை மேகங்கள் மற்றும் அசல் உணவுப் பாரம்பரியங்கள் — நெல்லை மண்ணின் முதன்மைத் தலங்களின் நேரடி களத் தொகுப்பு.'
+                : 'Thamirabarani’s sacred waters, 7th-century musical stone pillars, mist-clad tea hills, and unhurried culinary legends — curated with verified timings, honest rules, and genuine traveler protocols.'}
+            </p>
+          </div>
 
-            {/* Quick toggles */}
-            <div className="flex items-center gap-3 shrink-0">
-              <label className="flex items-center gap-2 text-xs text-text-heading font-medium cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={freeOnly}
-                  onChange={(e) => setFreeOnly(e.target.checked)}
-                  className="rounded border-border-subtle text-brand-forest focus:ring-brand-forest cursor-pointer"
-                />
-                <span>{lang === 'ta' ? 'இலவச அனுமதி மட்டும்' : 'Free Entry Only'}</span>
-              </label>
-
-              <a
-                href="#district-map"
-                className="inline-flex items-center gap-1.5 text-xs text-brand-terracotta hover:underline font-semibold"
-              >
-                <Compass size={14} />
-                <span>{lang === 'ta' ? 'வரைபடம் காண்க' : 'Open Leaflet Map'}</span>
-              </a>
+          <div className="shrink-0 flex flex-col items-start lg:items-end gap-2 relative z-10">
+            <div className="text-left lg:text-right italic font-serif text-sm sm:text-base text-text-heading/90 max-w-xs">
+              “{lang === 'ta'
+                ? 'வற்றாத தாமிரபரணியும், இசைத்தூண் அதிசயங்களும்... தென் தமிழகத்தின் தலைசிறந்த ஆன்மா.'
+                : 'Perennial river, musical pillars, eternal heritage. The sovereign soul of South Tamil Nadu.'}”
+              <div className="h-[1px] w-16 bg-brand-gold/60 mt-2 lg:ml-auto" />
             </div>
-
+            <span className="text-xs font-mono font-medium text-brand-forest mt-2 px-3.5 py-1 rounded-full bg-brand-forest/10 border border-brand-forest/20">
+              Showing {filteredPlaces.length} of {district.places?.length || 0} Verified Places
+            </span>
           </div>
         </div>
       </section>
 
-      {/* 5. THE 10 LANDMARK CARDS GRID */}
-      <main id="landmarks-grid" className="max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14 py-12 sm:py-16 scroll-mt-6">
-        
-        <div className="flex items-baseline justify-between mb-8">
-          <div>
-            <span className="font-cinzel text-xs tracking-[0.25em] text-brand-gold uppercase font-bold block mb-1">
-              VERIFIED CULTURAL CARTOGRAPHY
-            </span>
-            <h2 className="font-cinzel text-2xl sm:text-4xl font-bold text-text-heading">
-              {lang === 'ta' ? `${district.nameTa} முக்கிய அடையாளங்கள்` : `${district.name} Landmarks & Essential Destinations`}
-            </h2>
+      {/* Main Sticky Scrollytelling Stage */}
+      <main
+        id="landmarks-grid"
+        ref={cinemaTrackRef}
+        className="relative w-full"
+        style={{ height: `${Math.max(4, filteredPlaces.length) * 85}vh` }}
+      >
+        <div className="sticky top-0 w-full h-screen overflow-hidden flex flex-col justify-between bg-stone-950">
+          
+          {/* Layer 1: Stacked Panoramic Frames for Smooth Video-Scrub Crossfade */}
+          <div className="absolute inset-0 z-0 select-none pointer-events-none overflow-hidden">
+            {filteredPlaces.map((place, idx) => {
+              const isActive = idx === cinemaActiveIndex;
+              const isEven = idx % 2 === 1;
+
+              return (
+                <div
+                  key={`bg-${place.id}`}
+                  className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-out ${
+                    isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                  }`}
+                >
+                  <img
+                    src={place.image}
+                    alt={place.name}
+                    className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${
+                      isActive ? 'scale-105' : 'scale-100'
+                    } ${isEven ? 'object-center lg:object-left' : 'object-center lg:object-right'}`}
+                    loading="eager"
+                    decoding="async"
+                  />
+                </div>
+              );
+            })}
           </div>
-          <span className="text-xs text-text-meta font-medium">
-            Showing {filteredPlaces.length} of {district.places?.length || 0}
-          </span>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-          {filteredPlaces.map((place) => {
-            const isNoteActive = copiedId === place.id;
+          {/* Layer 2: Intelligent Directional Scrim Overlay */}
+          <div className="absolute inset-0 z-10 bg-gradient-to-t from-stone-950 via-stone-950/85 to-stone-950/30 lg:hidden pointer-events-none" />
+          <div
+            className={`hidden lg:block absolute inset-0 z-10 pointer-events-none transition-all duration-700 ${
+              cinemaActiveIndex % 2 === 1
+                ? 'bg-gradient-to-l from-stone-950 via-stone-950/95 via-stone-950/75 to-transparent w-3/5 ml-auto'
+                : 'bg-gradient-to-r from-stone-950 via-stone-950/95 via-stone-950/75 to-transparent w-3/5'
+            }`}
+          />
+          <div className="hidden lg:block absolute inset-0 z-10 bg-gradient-to-t from-stone-950/80 via-transparent to-stone-950/50 pointer-events-none" />
 
-            return (
-              <article
-                key={place.id}
-                id={place.id}
-                className="bg-white rounded-3xl overflow-hidden border border-border-subtle shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between group"
-              >
-                <div>
-                  {/* Image Header with Badges */}
-                  <div className="relative w-full h-64 sm:h-72 overflow-hidden bg-stone-100">
-                    <img
-                      src={place.image}
-                      alt={place.name}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          {/* Layer 3: Top Ambient Status in Cinema Viewport */}
+          <div className="relative z-20 w-full max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-16 pt-5 sm:pt-7 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-cinzel text-[11px] sm:text-xs tracking-[0.25em] text-brand-gold uppercase font-bold">
+                {lang === 'ta' ? 'அதிவேக சினிமா களப் பார்வை' : 'CINEMATIC FIELD DISPATCH'}
+              </span>
+              <div className="h-[1px] w-12 bg-brand-gold/60" />
+              <span className="text-[11px] font-mono text-brand-gold-light/80">
+                {String(cinemaActiveIndex + 1).padStart(2, '0')} / {String(filteredPlaces.length).padStart(2, '0')}
+              </span>
+            </div>
+          </div>
 
-                    {/* Top Category Badge */}
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-black/60 backdrop-blur-md text-brand-gold-light border border-brand-gold/40 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
-                        {lang === 'ta' ? place.categoryLabelTa : place.categoryLabel}
-                      </span>
-                    </div>
+          {/* Layer 4: Synchronized Morphing Content */}
+          <div className="relative z-20 w-full max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-16 my-auto py-2">
+            {filteredPlaces.length > 0 && (() => {
+              const currentPlace = filteredPlaces[cinemaActiveIndex] || filteredPlaces[0];
+              const isEven = cinemaActiveIndex % 2 === 1;
+              const isNoteActive = copiedId === currentPlace.id;
 
-                    {/* Place Name and Venue on Image */}
-                    <div className="absolute bottom-4 left-4 right-4 text-white">
-                      <h3 className="font-cinzel text-xl sm:text-2xl font-bold tracking-tight mb-1 text-white drop-shadow">
-                        {lang === 'ta' ? place.nameTa : place.name}
-                      </h3>
-                      <div className="flex items-center gap-1.5 text-xs text-white/90">
-                        <MapPin size={13} className="text-brand-terracotta shrink-0" />
-                        <span className="truncate">{lang === 'ta' ? place.venueTa : place.venue}</span>
-                      </div>
-                    </div>
+              return (
+                <div
+                  key={currentPlace.id}
+                  className={`w-full lg:w-[50%] flex flex-col justify-between text-left transition-all duration-500 ease-out ${
+                    isEven ? 'lg:ml-auto' : ''
+                  }`}
+                >
+                  {/* Category Eyebrow */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-cinzel text-xs font-bold text-brand-gold tracking-[0.25em] uppercase">
+                      {lang === 'ta' ? currentPlace.categoryLabelTa : currentPlace.categoryLabel}
+                    </span>
+                    <div className="h-[1px] w-16 bg-brand-gold/50" />
+                    <span className="text-[11px] font-mono text-brand-gold-light/70">
+                      {String(cinemaActiveIndex + 1).padStart(2, '0')} / {String(filteredPlaces.length).padStart(2, '0')}
+                    </span>
                   </div>
 
-                  {/* Place Body & Operational Details */}
-                  <div className="p-6 sm:p-7 space-y-4">
-                    
-                    {/* Operational Timings Table / Details */}
-                    <div className="grid grid-cols-2 gap-3 p-3.5 bg-bg-sand/60 rounded-2xl border border-border-subtle text-xs">
-                      
-                      {/* Opens */}
-                      <div className="flex items-start gap-2">
-                        <Clock size={15} className="text-brand-forest shrink-0 mt-0.5" />
+                  {/* Heading & Venue */}
+                  <h3 className="font-cinzel text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white mb-2 drop-shadow-lg leading-tight">
+                    {lang === 'ta' ? currentPlace.nameTa : currentPlace.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-brand-gold-light mb-3 drop-shadow">
+                    <MapPin size={15} className="shrink-0 text-brand-gold" />
+                    <span>{lang === 'ta' ? currentPlace.venueTa : currentPlace.venue}</span>
+                  </div>
+
+                  {/* Narrative Story Description */}
+                  <p className="font-serif text-sm sm:text-base text-white/90 leading-relaxed mb-4 drop-shadow">
+                    {currentPlace.highlight}
+                  </p>
+
+                  {/* Editorial Pull-Quote / Insider Ground Reality Insight */}
+                  {currentPlace.insiderTip && (
+                    <div className="relative pl-4 border-l-2 border-brand-gold my-3 py-2 italic font-serif text-xs sm:text-sm text-white/95 bg-black/40 backdrop-blur-md rounded-r-2xl pr-4 border-r border-t border-b border-white/10 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1 not-italic">
+                        <img
+                          src="/images/nammaoor_logo.webp"
+                          alt="NammaOor"
+                          className="w-4 h-4 object-contain rounded-full bg-white p-0.5"
+                        />
+                        <span className="text-brand-gold font-bold font-cinzel text-[10px] tracking-widest uppercase">
+                          {lang === 'ta' ? 'அங்கீகரிக்கப்பட்ட கள உண்மை' : 'AUTHENTICATED GROUND DISPATCH'}
+                        </span>
+                      </div>
+                      “{lang === 'ta' ? currentPlace.insiderTipTa : currentPlace.insiderTip}”
+                    </div>
+                  )}
+
+                  {/* Seasonal Variation Alert if any */}
+                  {currentPlace.hasTimingVariation && currentPlace.seasonalNote && (
+                    <div className="p-2.5 bg-amber-950/70 backdrop-blur-md border border-amber-500/40 rounded-xl flex items-start gap-2 text-xs text-amber-200 my-2">
+                      <AlertCircle size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                      <p>{lang === 'ta' ? currentPlace.seasonalNoteTa : currentPlace.seasonalNote}</p>
+                    </div>
+                  )}
+
+                  {/* Operational Details Glass Pills Row */}
+                  <div className="pt-3 mt-1 border-t border-white/15">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs mb-4">
+                      {/* Timings */}
+                      <div className="flex items-start gap-2 bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10">
+                        <Clock size={15} className="text-brand-gold shrink-0 mt-0.5" />
                         <div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-meta block">Opens / Closes</span>
-                          <span className="font-semibold text-text-heading">
-                            {place.opens} – {place.closes}
+                          <span className="text-[9px] uppercase tracking-wider text-white/60 font-bold block">
+                            {lang === 'ta' ? 'திறக்கும் நேரம்' : 'HOURS'}
+                          </span>
+                          <span className="font-semibold text-white text-[11px] sm:text-xs">
+                            {currentPlace.opens} – {currentPlace.closes}
                           </span>
                         </div>
                       </div>
 
-                      {/* Peak Time */}
-                      <div className="flex items-start gap-2">
-                        <Users size={15} className="text-brand-gold-dark shrink-0 mt-0.5" />
+                      {/* Fee */}
+                      <div className="flex items-start gap-2 bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10">
+                        <Ticket size={15} className="text-brand-gold shrink-0 mt-0.5" />
                         <div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-meta block">Peak Crowd Time</span>
-                          <span className="font-semibold text-text-heading">
-                            {place.peakHours}
+                          <span className="text-[9px] uppercase tracking-wider text-white/60 font-bold block">
+                            {lang === 'ta' ? 'அனுமதி' : 'ENTRY'}
+                          </span>
+                          <span className="font-semibold text-white text-[11px] sm:text-xs">
+                            {currentPlace.fee}
                           </span>
                         </div>
                       </div>
 
+                      {/* Peak Crowd */}
+                      <div className="flex items-start gap-2 col-span-2 sm:col-span-1 bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10">
+                        <Users size={15} className="text-brand-gold shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-white/60 font-bold block">
+                            {lang === 'ta' ? 'கூட்டம் நேரம்' : 'PEAK RUSH'}
+                          </span>
+                          <span className="font-semibold text-white text-[11px] sm:text-xs">
+                            {currentPlace.peakHours}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Entry Fee Box */}
-                    <div className="flex items-center justify-between text-xs p-3 bg-white border border-border-subtle rounded-xl">
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <button
+                        onClick={() => handleZoomToPlace(currentPlace)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-gold hover:text-brand-gold-light transition-colors cursor-pointer"
+                      >
+                        <Compass size={15} />
+                        <span>{lang === 'ta' ? 'வரைபடத்தில் பார்க்க' : 'Locate on Map'}</span>
+                      </button>
+
                       <div className="flex items-center gap-2">
-                        <Ticket size={15} className="text-brand-terracotta shrink-0" />
-                        <span className="font-medium text-text-body">{place.fee}</span>
-                      </div>
-                      {place.phoneContact && (
-                        <a
-                          href={`tel:${place.phoneContact}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-forest hover:underline"
+                        <button
+                          onClick={() => handleCopy(currentPlace)}
+                          className="p-2 sm:px-3 sm:py-1.5 rounded-xl border border-white/20 bg-black/40 hover:bg-black/60 text-white transition-colors cursor-pointer text-xs flex items-center gap-1.5 font-medium shadow-sm backdrop-blur-md"
+                          title="Copy Field Details"
                         >
-                          <Phone size={12} />
-                          <span>{place.phoneContact}</span>
+                          {isNoteActive ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                          <span className="hidden sm:inline">
+                            {isNoteActive
+                              ? (lang === 'ta' ? 'நகலெடுக்கப்பட்டது' : 'Copied')
+                              : (lang === 'ta' ? 'குறிப்பு நகலெடு' : 'Copy Note')}
+                          </span>
+                        </button>
+
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${currentPlace.lat},${currentPlace.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 bg-brand-forest hover:bg-brand-forest/90 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors shadow-md"
+                        >
+                          <span>{lang === 'ta' ? 'வழிகாட்டல்' : 'Directions'}</span>
+                          <ExternalLink size={12} />
                         </a>
-                      )}
+                      </div>
                     </div>
-
-                    {/* Highlight Description */}
-                    <p className="text-xs sm:text-sm text-text-body leading-relaxed">
-                      {place.highlight}
-                    </p>
-
-                    {/* Special Seasonal Variation Alert */}
-                    {place.hasTimingVariation && place.seasonalNote && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 text-xs text-amber-900">
-                        <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                        <p>{lang === 'ta' ? place.seasonalNoteTa : place.seasonalNote}</p>
-                      </div>
-                    )}
-
-                    {/* Insider Secret / Direction Guide */}
-                    {place.insiderTip && (
-                      <div className="p-3 bg-stone-900 text-stone-100 rounded-xl flex items-start gap-2 text-xs leading-relaxed border border-stone-800">
-                        <Info size={15} className="text-brand-gold shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-brand-gold font-cinzel text-[11px] block mb-0.5">
-                            {lang === 'ta' ? 'அறிந்திருக்க வேண்டிய குறிப்பு:' : 'INSIDER FIELD NOTE:'}
-                          </strong>
-                          <span>{lang === 'ta' ? place.insiderTipTa : place.insiderTip}</span>
-                        </div>
-                      </div>
-                    )}
-
                   </div>
                 </div>
+              );
+            })()}
+          </div>
 
-                {/* Card Action Footer */}
-                <div className="p-6 pt-0 border-t border-border-subtle/60 flex items-center justify-between gap-3 text-xs">
-                  
-                  <button
-                    onClick={() => handleZoomToPlace(place)}
-                    className="inline-flex items-center gap-1.5 text-brand-forest hover:text-brand-forest/80 font-bold transition-colors cursor-pointer"
-                  >
-                    <Compass size={14} />
-                    <span>{lang === 'ta' ? 'வரைபடத்தில் பார்க்க' : 'Locate on Map'}</span>
-                  </button>
+          {/* Bottom spacing buffer for pure cinematic immersion */}
+          <div className="relative z-20 w-full pb-6" />
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCopy(place)}
-                      className="p-2 rounded-xl border border-border-subtle hover:bg-bg-sand text-text-heading transition-colors cursor-pointer"
-                      title="Copy Place Details"
-                    >
-                      {isNoteActive ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                    </button>
-
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 bg-brand-forest hover:bg-brand-forest/90 text-white font-semibold px-4 py-2 rounded-xl transition-colors"
-                    >
-                      <span>{lang === 'ta' ? 'வழிகாட்டல்' : 'Directions'}</span>
-                      <ExternalLink size={12} />
-                    </a>
-                  </div>
-
-                </div>
-
-              </article>
-            );
-          })}
         </div>
-
       </main>
 
-      {/* 6. INSIDER TRAVELER PLAYBOOK & FIELD NOTES ACCORDION */}
+      {/* 6. THE 38-DISTRICT INTERACTIVE MAP ATLAS */}
+      <AtlasInteractiveSection
+        lang={lang}
+        selectedDistrict={selectedAtlasDistrict}
+        onSelectDistrict={(dist) => {
+          if (typeof dist === 'string') {
+            const found = DISTRICTS.find((d) => d.id === dist);
+            if (found) setSelectedAtlasDistrict(found);
+          } else if (dist?.id) {
+            setSelectedAtlasDistrict(dist);
+          }
+        }}
+        onNavigateToDistrict={onNavigateToDistrict}
+      />
+
+      {/* 7. INSIDER TRAVELER PLAYBOOK & FIELD NOTES ACCORDION */}
       {district.insiderNotes?.length > 0 && (
         <section className="relative w-full text-white py-16 sm:py-24 border-t border-white/10 overflow-hidden bg-stone-950">
           {/* Atmospheric Background Image with Vivid Temple Illumination */}
           <div className="absolute inset-0 z-0 pointer-events-none">
             <img
-              src="/images/tirunelveli_field_notes_bg.jpg"
+              src="/images/tirunelveli_field_notes_bg.webp"
               alt="Ancient Heritage & Pillar Hall Corridor"
               className="w-full h-full object-cover object-center opacity-70 select-none"
             />
@@ -797,8 +827,16 @@ export default function DistrictPage({
           <div className="relative z-10 max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14">
             
             <div className="text-center max-w-2xl mx-auto mb-12">
+              {/* Official Brand Crest Emblem */}
+              <div className="w-14 h-14 mx-auto mb-3.5 p-1 rounded-2xl bg-white/10 backdrop-blur-md border border-brand-gold/40 shadow-gold flex items-center justify-center">
+                <img
+                  src="/images/nammaoor_logo.webp"
+                  alt="NammaOor.life Tourist Guide"
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <span className="font-cinzel text-xs tracking-[0.25em] text-brand-gold uppercase font-bold block mb-2">
-                DISPATCHES & GROUND REALITY
+                AUTHENTICATED FIELD INTELLIGENCE · NAMMAOOR.LIFE
               </span>
               <h2 className="font-cinzel text-3xl sm:text-4xl font-bold tracking-tight text-white mb-3">
                 {lang === 'ta' ? `${district.nameTa} பயணக் களக்குறிப்புகள்` : `${district.name} Field Notes & Playbook`}
@@ -858,52 +896,6 @@ export default function DistrictPage({
         </section>
       )}
 
-      {/* 7. INTERACTIVE DISTRICT CLUSTER MAP */}
-      <section id="district-map" className="w-full bg-bg-sand/70 py-16 sm:py-20 border-b border-border-subtle">
-        <div className="max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14">
-          
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
-            <div>
-              <span className="font-cinzel text-xs tracking-[0.25em] text-brand-gold uppercase font-bold block mb-1">
-                EXACT GPS CARTOGRAPHY
-              </span>
-              <h2 className="font-cinzel text-2xl sm:text-3xl font-bold text-text-heading">
-                {lang === 'ta' ? `${district.nameTa} புவியியல் வரைபடம்` : 'Interactive District Cluster Map'}
-              </h2>
-              <p className="text-xs sm:text-sm text-text-meta mt-1">
-                Pins represent curated landmarks across {district.name}.
-              </p>
-            </div>
-
-            {/* Map tile toggle */}
-            <div className="flex items-center gap-2 bg-white p-1 rounded-full border border-border-subtle shadow-sm text-xs">
-              <button
-                onClick={() => setActiveMapLayer('osm')}
-                className={`px-3 py-1 rounded-full font-medium transition-colors cursor-pointer ${
-                  activeMapLayer === 'osm' ? 'bg-brand-forest text-white' : 'text-text-body hover:bg-bg-sand'
-                }`}
-              >
-                Street Map
-              </button>
-              <button
-                onClick={() => setActiveMapLayer('satellite')}
-                className={`px-3 py-1 rounded-full font-medium transition-colors cursor-pointer ${
-                  activeMapLayer === 'satellite' ? 'bg-brand-forest text-white' : 'text-text-body hover:bg-bg-sand'
-                }`}
-              >
-                Satellite View
-              </button>
-            </div>
-          </div>
-
-          {/* Leaflet Container */}
-          <div className="w-full h-[450px] sm:h-[520px] rounded-3xl overflow-hidden border border-border-subtle shadow-card relative z-10">
-            <div ref={mapContainerRef} className="w-full h-full" />
-          </div>
-
-        </div>
-      </section>
-
       {/* 8. NEXT DISTRICT TEASER FOOTER */}
       <section className="w-full bg-bg-primary py-12 border-t border-border-subtle">
         <div className="max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14 flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -921,10 +913,15 @@ export default function DistrictPage({
 
           <button
             onClick={onBackToAtlas}
-            className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white font-cinzel font-bold text-xs px-6 py-3 rounded-full transition-colors cursor-pointer shadow-md"
+            className="inline-flex items-center gap-3 bg-stone-900 hover:bg-stone-800 text-white font-cinzel font-bold text-xs px-5 py-2.5 rounded-full transition-all cursor-pointer shadow-md hover:shadow-gold border border-brand-gold/30 group"
           >
-            <span>{lang === 'ta' ? 'அனைத்து 38 மாவட்டங்களை ஆராய்க' : 'Explore All 38 Districts'}</span>
-            <ArrowLeft size={14} className="rotate-180" />
+            <img
+              src="/images/nammaoor_logo.webp"
+              alt="NammaOor.life"
+              className="w-6 h-6 object-contain rounded-full bg-white p-0.5"
+            />
+            <span>{lang === 'ta' ? 'அனைத்து 38 மாவட்ட முகப்பு' : 'Return to NammaOor.life Hub'}</span>
+            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform text-brand-gold" />
           </button>
         </div>
       </section>

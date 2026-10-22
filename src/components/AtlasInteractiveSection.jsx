@@ -16,13 +16,18 @@ export default function AtlasInteractiveSection({
       <div className="max-w-[1340px] mx-auto px-5 sm:px-8 lg:px-14 flex flex-col items-center text-center">
         
         {/* Section Header */}
-        <div className="mb-10 max-w-2xl">
+        <div className="mb-10 max-w-2xl flex flex-col items-center">
+          <img
+            src="/images/nammaoor_logo.webp"
+            alt="NammaOor.life Tourist Guide"
+            className="w-12 h-12 object-contain rounded-full bg-white p-0.5 shadow-gold border border-brand-gold/40 mb-3"
+          />
           <span className="font-cinzel text-xs tracking-[0.25em] uppercase text-brand-gold font-bold mb-2 block">
             HIGH-ACCURACY GEOGRAPHIC CARTOGRAPHY
           </span>
           <h2 className="font-cinzel text-3xl sm:text-5xl font-bold tracking-tight text-text-heading mb-4 leading-tight">
             THE 38-DISTRICT <br />
-            <span className="text-brand-terracotta">INTERACTIVE ATLAS</span>
+            <span className="text-brand-terracotta">INTERACTIVE GUIDE</span>
           </h2>
           <p className="font-serif text-base sm:text-lg text-text-body">
             Real satellite topography, real GPS coordinates, and historical riverbeds. Explore verified local places across all 38 districts of Tamil Nadu.

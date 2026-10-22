@@ -16,7 +16,7 @@ export default function RoyalHero({
       id: 'tirunelveli',
       title: 'Tirunelveli',
       subtitle: 'ROYAL HERITAGE & HALWA',
-      image: '/images/tirunelveli_halwa.jpg',
+      image: '/images/tirunelveli_halwa.webp',
       isLive: true,
       tag: 'LIVE HUB'
     },
@@ -24,7 +24,7 @@ export default function RoyalHero({
       id: 'madurai',
       title: 'Madurai',
       subtitle: 'SPIRITUAL SOUL · KARI DOSA',
-      image: '/images/tamilnadu_palace_dusk.jpg',
+      image: '/images/tamilnadu_palace_dusk.webp',
       isLive: false,
       tag: 'LAUNCHING NEXT'
     },
@@ -32,7 +32,7 @@ export default function RoyalHero({
       id: 'tenkasi',
       title: 'Tenkasi',
       subtitle: 'SERENE HERBAL CASCADES',
-      image: '/images/courtallam_falls.jpg',
+      image: '/images/courtallam_falls.webp',
       isLive: false,
       tag: 'AGASTHIYAR GHATS'
     },
@@ -40,7 +40,7 @@ export default function RoyalHero({
       id: 'thanjavur',
       title: 'Thanjavur',
       subtitle: 'CHOLA BIG TEMPLE MARVEL',
-      image: '/images/nellaiappar_temple.jpg',
+      image: '/images/nellaiappar_temple.webp',
       isLive: false,
       tag: 'KAVERI DELTA'
     }
@@ -51,7 +51,7 @@ export default function RoyalHero({
       {/* Background Image with Cinematic Golden Hour Gradient */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/images/tamilnadu_hero_sunset.jpg"
+          src="/images/tamilnadu_hero_sunset.webp"
           alt="Explore Tamil Nadu"
           className="w-full h-full object-cover object-center"
         />
@@ -62,17 +62,19 @@ export default function RoyalHero({
 
       {/* Top Floating Glass Navigation Bar (matching reference) */}
       <nav className="relative z-20 w-full px-5 sm:px-8 lg:px-14 pt-6 sm:pt-8 flex items-center justify-between">
-        {/* Monogram Brand Logo */}
+        {/* Official Brand Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full border border-brand-gold/60 bg-black/30 backdrop-blur-md flex items-center justify-center text-brand-gold font-cinzel text-xl font-bold shadow-gold">
-            ந
-          </div>
+          <img
+            src="/images/nammaoor_logo.webp"
+            alt="NammaOor.life Tourist Guide"
+            className="w-11 h-11 sm:w-12 sm:h-12 object-contain rounded-full bg-white p-0.5 shadow-gold border border-brand-gold/60 shrink-0"
+          />
           <div className="flex flex-col">
             <span className="font-cinzel text-lg sm:text-xl font-bold tracking-[0.2em] text-white">
               NammaOor<span className="text-gold-gradient font-sans font-bold text-base sm:text-xl">.life</span>
             </span>
-            <span className="text-[9px] tracking-[0.3em] uppercase text-brand-gold-light -mt-1 font-medium">
-              DISCOVERY ARCHIVE · TAMIL NADU
+            <span className="text-[9px] tracking-[0.25em] uppercase text-brand-gold-light -mt-1 font-bold">
+              TOURIST GUIDE · TAMIL NADU
             </span>
           </div>
         </div>

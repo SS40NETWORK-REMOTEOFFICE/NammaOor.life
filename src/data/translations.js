@@ -18,7 +18,7 @@ export const TRANSLATIONS = {
     verifierSubtitle: 'Curated by residents of 15+ years. Never for sale.',
     readStory: 'Read dispatch →',
     exploreTitle: 'The Editorial Archive',
-    allDistrictsTitle: 'The 38-District Atlas',
+    allDistrictsTitle: 'The 38-District Guide',
     allDistrictsSubtitle: 'Select any district to explore verified places or reserve an early launch pass.',
     quizPrompt: 'Where should your next Tamil journey begin?',
     quizButton: 'Start Curated Match Quiz →',

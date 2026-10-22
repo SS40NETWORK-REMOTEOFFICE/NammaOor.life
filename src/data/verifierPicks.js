@@ -5,7 +5,7 @@ export const VERIFIER_PICKS = [
     nameTa: 'சாந்தி ஸ்வீட்ஸ் (கிழக்கு ரத வீதி)',
     district: 'Tirunelveli',
     districtTa: 'திருநெல்வேலி',
-    image: '/images/tirunelveli_halwa.jpg',
+    image: '/images/tirunelveli_halwa.webp',
     description: '"The genuine Thamirabarani water wheat halwa churned in copper pots. Warm, glossy, and never overly sweet."',
     descriptionTa: '"தாமிரபரணி ஆற்று நீரில் பாரம்பரிய முறைப்படி கிளறப்படும் அசல் கோதுமை அல்வா. வாழை இலையில் சூடாக வாங்க வேண்டும்."',
     verifier: {
